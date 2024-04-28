@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Handpose Gesture Detection</title>
+</head>
+<body>
+  <video id="video" width="640" height="480" autoplay></video>
+  <canvas id="canvas" width="640" height="480"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection"></script>
+  <script src="./handpose.js"></script>
+  <script>
+    const jsonString = '{"event":"onHands","data":[{"handedness":"Left","keypoints":[[23.047043323516846,9.784419536590576],[46.653414726257324,11.531378746032715],[66.96166181564331,26.288684606552124],[79.90035915374756,43.30565071105957],[87.0949182510376,56.13868188858032],[53.073476791381836,50.040287017822266],[69.68977355957031,76.80867290496826],[77.98272657394409,88.66751289367676],[82.86686038970947,96.19642639160156],[42.366872787475586,56.39025592803955],[58.64567708969116,81.3682222366333],[68.51038312911987,91.71015071868896],[74.682373046875,98.23159217834473],[35.09310054779053,60.241530418395996],[50.16268491744995,83.30645942687988],[59.87047004699707,92.72237777709961],[66.02318382263184,98.74170112609863],[31.484528064727783,62.00135135650635],[44.856789112091064,82.85986518859863],[53.52222013473511,91.9993314743042],[59.67464017868042,97.55914306640625]]}]}';
+
+// Parse JSON string into JavaScript object
+const data = JSON.parse(jsonString);
+
+// Access the 'data' array
+const handData = data.data;
+
+// Iterate over each element of the 'data' array
+handData.forEach(hand => {
+    // Access the 'keypoints' array for each hand
+    const keypoints = hand.keypoints;
+    
+    // Log the keypoints for this hand
+    console.log("Hand keypoints:");
+    keypoints.forEach((point, index) => {
+        console.log(`Keypoint ${index + 1}: [${point.join(', ')}]`);
+    });
+});
+  </script>
+  <script>
+    async function runHandpose() {
+      // Load the handpose model
+      const handpose = await handpose.load();
+      
+      // Access webcam
+      const video = document.getElementById('video');
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      const constraints = { video: true };
+
+      navigator.mediaDevices.getUserMedia(constraints)
+        .then((stream) => {
+          video.srcObject = stream;
+        })
+        .catch((error) => {
+          console.error('Error accessing webcam: ', error);
+        });
+
+      // Detect hands in each frame
+      async function detectHands() {
+        const predictions = await handpose.estimateHands(video);
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Draw hand keypoints
+        if (predictions.length > 0) {
+          predictions.forEach((prediction) => {
+            prediction.landmarks.forEach((landmark) => {
+              ctx.beginPath();
+              ctx.arc(landmark[0], landmark[1], 5, 0, 2 * Math.PI);
+              ctx.fillStyle = 'red';
+              ctx.fill();
+            });
+          });
+        }
+        requestAnimationFrame(detectHands);
+      }
+
+      detectHands();
+    }
+
+    runHandpose();
+  </script>
+</body>
+</html>
